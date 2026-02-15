@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from app.config import settings
 from app.api.routes import router
+from app.api.routes_v2 import router as router_v2
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -36,8 +37,9 @@ app.add_middleware(
 )
 
 
-# Include API router
-app.include_router(router)
+# Include API routers
+app.include_router(router)      # V1 API (chatbot)
+app.include_router(router_v2)   # V2 API (similarity-based search)
 
 
 # Mount static files
@@ -70,12 +72,16 @@ async def startup_event():
     try:
         from app.services.llm_service import get_llm_service
         from app.services.sparql_service import get_sparql_service
+        from app.services.similarity_medicine_service import get_similarity_medicine_service
         
         llm_service = get_llm_service()
         logger.info("✓ LLM Service initialized successfully")
         
         sparql_service = get_sparql_service()
         logger.info("✓ SPARQL Service initialized successfully")
+        
+        similarity_service = get_similarity_medicine_service()
+        logger.info("✓ Similarity Medicine Service (V2) initialized successfully")
         
     except Exception as e:
         logger.error(f"✗ Service initialization failed: {str(e)}")
