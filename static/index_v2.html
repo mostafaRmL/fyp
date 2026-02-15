@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered medical assistant using ontology-based similarity search">
+    <title>Medical Assistant v2.0 - Similarity-Based Drug Search</title>
+    <link rel="stylesheet" href="/static/css/style_v2.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <span class="logo-icon">🏥</span>
+                    Medical Assistant v2.0
+                </h1>
+                <p class="tagline">Ontology-Based Similarity Search for Drug Recommendations</p>
+                <div class="version-badge">BFS Graph Traversal • Wikidata Knowledge Graph</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            
+            <!-- Mode Switcher -->
+            <section class="mode-section">
+                <div class="card">
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" data-mode="symptom" onclick="switchMode('symptom')">
+                            <span class="tab-icon">🤒</span>
+                            <span class="tab-text">Search by Symptoms</span>
+                        </button>
+                        <button class="mode-tab" data-mode="disease" onclick="switchMode('disease')">
+                            <span class="tab-icon">🏥</span>
+                            <span class="tab-text">Search by Disease</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Symptom Search Mode -->
+            <section id="symptomMode" class="search-mode active">
+                <div class="card">
+                    <h2 class="section-title">Search by Symptoms</h2>
+                    <p class="section-description">
+                        Enter your symptoms, and our ontology-based algorithm will find relevant drug recommendations with similarity scores.
+                    </p>
+                    
+                    <form id="symptomForm" class="search-form">
+                        <div class="form-group">
+                            <label class="form-label">Symptoms (one per line)</label>
+                            <div id="symptomInputs" class="symptom-inputs">
+                                <div class="symptom-input-row">
+                                    <input type="text" class="form-input symptom-field" placeholder="e.g., fever" required>
+                                    <button type="button" class="btn-icon btn-remove" onclick="removeSymptomInput(this)" title="Remove">✕</button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-add" onclick="addSymptomInput()">
+                                <span>+ Add Symptom</span>
+                            </button>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="symptomTopK" class="form-label">Max Results</label>
+                                <input type="number" id="symptomTopK" class="form-input" value="5" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label for="symptomThreshold" class="form-label">Similarity Threshold</label>
+                                <input type="number" id="symptomThreshold" class="form-input" value="0.7" min="0" max="1" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="symptomSearchBtn">
+                            <span class="btn-text">🔍 Search Drugs</span>
+                            <span class="btn-loading" style="display: none;">
+                                <span class="spinner"></span>
+                                Searching...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Disease Search Mode -->
+            <section id="diseaseMode" class="search-mode">
+                <div class="card">
+                    <h2 class="section-title">Search by Disease</h2>
+                    <p class="section-description">
+                        Enter a disease or medical condition to find drugs that treat it and similar alternatives.
+                    </p>
+                    
+                    <form id="diseaseForm" class="search-form">
+                        <div class="form-group">
+                            <label for="diseaseName" class="form-label">Disease Name</label>
+                            <input 
+                                type="text" 
+                                id="diseaseName" 
+                                class="form-input" 
+                                placeholder="e.g., Type 2 Diabetes, Hypertension, Asthma"
+                                required
+                            >
+                            <span class="input-hint">Enter the common name of the disease</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="diseaseId" class="form-label">Wikidata ID (Optional)</label>
+                            <input 
+                                type="text" 
+                                id="diseaseId" 
+                                class="form-input" 
+                                placeholder="e.g., Q3025883"
+                            >
+                            <span class="input-hint">If known, provide the Wikidata entity ID for more accurate results</span>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="diseaseTopK" class="form-label">Max Results</label>
+                                <input type="number" id="diseaseTopK" class="form-input" value="5" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label for="diseaseThreshold" class="form-label">Similarity Threshold</label>
+                                <input type="number" id="diseaseThreshold" class="form-input" value="0.7" min="0" max="1" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="diseaseSearchBtn">
+                            <span class="btn-text">🔍 Search Drugs</span>
+                            <span class="btn-loading" style="display: none;">
+                                <span class="spinner"></span>
+                                Searching...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="results-section" style="display: none;">
+                
+                <!-- Search Summary -->
+                <div class="card">
+                    <h2 class="section-title">Search Results</h2>
+                    
+                    <div class="search-summary">
+                        <div class="summary-item">
+                            <div class="summary-label">Query Type:</div>
+                            <div id="queryType" class="summary-value"></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Query Input:</div>
+                            <div id="queryInput" class="summary-value"></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Results Found:</div>
+                            <div id="resultsCount" class="summary-value"></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Execution Time:</div>
+                            <div id="executionTime" class="summary-value"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drug Recommendations -->
+                <div class="card">
+                    <h2 class="section-title">Drug Recommendations</h2>
+                    <div id="drugsList" class="drugs-list"></div>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="disclaimer-card">
+                    <div class="disclaimer-icon">⚠️</div>
+                    <div class="disclaimer-content">
+                        <strong>Medical Disclaimer:</strong>
+                        <p>This tool provides informational drug recommendations based on ontology similarity analysis. Results are generated from Wikidata knowledge graphs and should NOT be used as medical advice. Always consult with a qualified healthcare professional before making any medical decisions or taking any medication.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section id="errorSection" class="error-section" style="display: none;">
+                <div class="error-card">
+                    <div class="error-icon">❌</div>
+                    <div class="error-content">
+                        <h3>Error</h3>
+                        <p id="errorMessage"></p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="hideError()">Try Again</button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Medical Assistant v2.0. Powered by Ontology-Based Similarity Search.</p>
+                <p class="footer-links">
+                    <a href="/api/v2/" target="_blank">API v2 Info</a>
+                    <span>•</span>
+                    <a href="/api/v2/health" target="_blank">API Status</a>
+                    <span>•</span>
+                    <a href="/docs" target="_blank">Documentation</a>
+                    <span>•</span>
+                    <a href="/static/index.html">v1.0 (Chatbot)</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/static/js/app_v2.js"></script>
+</body>
+</html>

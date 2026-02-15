@@ -106,21 +106,24 @@ async def shutdown_event():
 @app.get("/")
 async def root():
     """
-    Root endpoint - Serves the main frontend page
+    Root endpoint - Serves the V2 frontend page (similarity-based search)
     
     Returns:
-        HTML file for the web interface
+        HTML file for the v2.0 web interface with ontology-based similarity search
     """
-    index_path = static_path / "index.html"
+    index_path = static_path / "index_v2.html"
     
     if index_path.exists():
         return FileResponse(str(index_path))
     else:
         return {
-            "message": "Medical Assistant API",
+            "message": "Medical Assistant API v2.0",
             "version": settings.APP_VERSION,
+            "description": "Ontology-based similarity search for drug recommendations",
             "docs": "/docs",
-            "api": "/api"
+            "api_v1": "/api",
+            "api_v2": "/api/v2",
+            "v1_ui": "/static/index.html"
         }
 
 
