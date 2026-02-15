@@ -229,6 +229,273 @@ class SPARQLService:
         
         return medicines
     
+    def find_conditions_by_symptom(self, symptoms: List[str], limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        Find medical conditions that match given symptoms.
+        Enhanced for v2.0 similarity-based search.
+        
+        Args:
+            symptoms: List of symptom names (e.g., ["fever", "cough", "headache"])
+            limit: Maximum number of results
+            
+        Returns:
+            List of conditions with matching symptom count
+            
+        Example:
+            >>> service = SPARQLService()
+            >>> conditions = service.find_conditions_by_symptom(["fever", "cough"])
+        """
+        logger.info(f"Searching conditions by symptoms: {symptoms}")
+        
+        # Build symptom filter for SPARQL
+        symptom_filters = " ".join([f'"{s.lower()}"@en' for s in symptoms])
+        
+        query = f"""
+        SELECT ?condition ?conditionLabel 
+               (COUNT(DISTINCT ?symptom) AS ?matchedSymptoms)
+               (GROUP_CONCAT(DISTINCT ?symptomLabel; separator=", ") AS ?matchedSymptomsList)
+        WHERE {{
+          # Find symptoms matching our list
+          VALUES ?symptomName {{ {symptom_filters} }}
+          ?symptom rdfs:label ?symptomName .
+          
+          # Find conditions that have these symptoms
+          ?condition wdt:P31/wdt:P279* wd:Q12136 .  # Instance of disease
+          ?condition wdt:P780 ?symptom .             # Has symptom
+          
+          # Get labels
+          ?symptom rdfs:label ?symptomLabel .
+          FILTER(LANG(?symptomLabel) = "en")
+          
+          SERVICE wikibase:label {{ 
+            bd:serviceParam wikibase:language "en" .
+          }}
+        }}
+        GROUP BY ?condition ?conditionLabel
+        ORDER BY DESC(?matchedSymptoms)
+        LIMIT {limit}
+        """
+        
+        results = self._execute_query(query)
+        
+        if not results:
+            logger.warning(f"No conditions found for symptoms: {symptoms}")
+            return []
+        
+        conditions = []
+        bindings = results.get('results', {}).get('bindings', [])
+        
+        for binding in bindings:
+            condition_uri = binding.get('condition', {}).get('value', '')
+            condition_id = condition_uri.split('/')[-1] if condition_uri else None
+            
+            if not condition_id:
+                continue
+            
+            condition = {
+                'condition_id': condition_id,
+                'name': binding.get('conditionLabel', {}).get('value', 'Unknown'),
+                'matched_symptoms': int(binding.get('matchedSymptoms', {}).get('value', 0)),
+                'symptom_list': binding.get('matchedSymptomsList', {}).get('value', '').split(', ')
+            }
+            conditions.append(condition)
+        
+        logger.info(f"Found {len(conditions)} conditions matching symptoms")
+        return conditions
+    
+    def get_related_conditions(self, condition_id: str, max_hops: int = 2, limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        Find conditions related to the given condition through ontology relationships.
+        Uses subclass hierarchy and related disease classes.
+        
+        Args:
+            condition_id: Wikidata ID of the condition (e.g., "Q12206" for diabetes)
+            max_hops: Maximum relationship hops (1-3)
+            limit: Maximum number of results
+            
+        Returns:
+            List of related conditions with relationship info
+            
+        Example:
+            >>> service = SPARQLService()
+            >>> related = service.get_related_conditions("Q12206", max_hops=2)
+        """
+        if not self.validator.is_valid_wikidata_id(condition_id):
+            logger.error(f"Invalid Wikidata ID: {condition_id}")
+            return []
+        
+        logger.info(f"Finding related conditions for: {condition_id} (max {max_hops} hops)")
+        
+        # Adjust property path based on max_hops
+        if max_hops == 1:
+            path = "wdt:P279"
+        elif max_hops == 2:
+            path = "wdt:P279/wdt:P279?"
+        else:  # 3 or more
+            path = "wdt:P279+"
+        
+        query = f"""
+        SELECT DISTINCT ?relatedCondition ?relatedConditionLabel ?parent ?parentLabel
+        WHERE {{
+          # Find parent classes of source condition
+          wd:{condition_id} {path} ?parent .
+          
+          # Find other conditions with same parent
+          ?relatedCondition {path} ?parent .
+          ?relatedCondition wdt:P31 wd:Q12136 .  # Instance of disease
+          
+          # Exclude source condition
+          FILTER(?relatedCondition != wd:{condition_id})
+          
+          SERVICE wikibase:label {{ 
+            bd:serviceParam wikibase:language "en" .
+          }}
+        }}
+        LIMIT {limit}
+        """
+        
+        results = self._execute_query(query)
+        
+        if not results:
+            logger.warning(f"No related conditions found for: {condition_id}")
+            return []
+        
+        related_conditions = []
+        bindings = results.get('results', {}).get('bindings', [])
+        
+        for binding in bindings:
+            related_uri = binding.get('relatedCondition', {}).get('value', '')
+            related_id = related_uri.split('/')[-1] if related_uri else None
+            parent_uri = binding.get('parent', {}).get('value', '')
+            parent_id = parent_uri.split('/')[-1] if parent_uri else None
+            
+            if not related_id:
+                continue
+            
+            condition = {
+                'condition_id': related_id,
+                'name': binding.get('relatedConditionLabel', {}).get('value', 'Unknown'),
+                'common_parent_id': parent_id,
+                'common_parent': binding.get('parentLabel', {}).get('value', 'Unknown'),
+                'relationship_type': 'subclass'
+            }
+            related_conditions.append(condition)
+        
+        logger.info(f"Found {len(related_conditions)} related conditions")
+        return related_conditions
+    
+    def get_condition_relationships(self, condition_id: str) -> Dict[str, Any]:
+        """
+        Get comprehensive relationship information for a condition.
+        Includes symptoms, parent classes, treated by drugs, etc.
+        
+        Args:
+            condition_id: Wikidata ID of the condition
+            
+        Returns:
+            Dictionary with relationship categories
+            
+        Example:
+            >>> service = SPARQLService()
+            >>> relationships = service.get_condition_relationships("Q12206")
+            >>> print(relationships['symptoms'])  # List of symptoms
+            >>> print(relationships['parent_classes'])  # Parent disease classes
+            >>> print(relationships['treatments'])  # Drugs that treat this
+        """
+        if not self.validator.is_valid_wikidata_id(condition_id):
+            logger.error(f"Invalid Wikidata ID: {condition_id}")
+            return {}
+        
+        logger.info(f"Fetching relationships for condition: {condition_id}")
+        
+        query = f"""
+        SELECT ?relationshipType ?entity ?entityLabel
+        WHERE {{
+          {{
+            # Symptoms
+            wd:{condition_id} wdt:P780 ?entity .
+            BIND("symptom" AS ?relationshipType)
+          }}
+          UNION
+          {{
+            # Parent classes (subclass of)
+            wd:{condition_id} wdt:P279 ?entity .
+            BIND("parent_class" AS ?relationshipType)
+          }}
+          UNION
+          {{
+            # Treatments (drugs that treat this condition)
+            ?entity wdt:P2175 wd:{condition_id} .
+            ?entity wdt:P31/wdt:P279* wd:Q12140 .  # Is a medication
+            BIND("treatment" AS ?relationshipType)
+          }}
+          UNION
+          {{
+            # Causative agents
+            wd:{condition_id} wdt:P828 ?entity .
+            BIND("causative_agent" AS ?relationshipType)
+          }}
+          
+          SERVICE wikibase:label {{ 
+            bd:serviceParam wikibase:language "en" .
+          }}
+        }}
+        """
+        
+        results = self._execute_query(query)
+        
+        if not results:
+            logger.warning(f"No relationships found for condition: {condition_id}")
+            return {
+                'condition_id': condition_id,
+                'symptoms': [],
+                'parent_classes': [],
+                'treatments': [],
+                'causative_agents': []
+            }
+        
+        # Organize results by relationship type
+        relationships = {
+            'condition_id': condition_id,
+            'symptoms': [],
+            'parent_classes': [],
+            'treatments': [],
+            'causative_agents': []
+        }
+        
+        bindings = results.get('results', {}).get('bindings', [])
+        
+        for binding in bindings:
+            rel_type = binding.get('relationshipType', {}).get('value', '')
+            entity_uri = binding.get('entity', {}).get('value', '')
+            entity_id = entity_uri.split('/')[-1] if entity_uri else None
+            entity_label = binding.get('entityLabel', {}).get('value', 'Unknown')
+            
+            if not entity_id:
+                continue
+            
+            entity_info = {
+                'entity_id': entity_id,
+                'name': entity_label
+            }
+            
+            # Add to appropriate category
+            if rel_type == 'symptom':
+                relationships['symptoms'].append(entity_info)
+            elif rel_type == 'parent_class':
+                relationships['parent_classes'].append(entity_info)
+            elif rel_type == 'treatment':
+                relationships['treatments'].append(entity_info)
+            elif rel_type == 'causative_agent':
+                relationships['causative_agents'].append(entity_info)
+        
+        logger.info(f"Found {len(relationships['symptoms'])} symptoms, "
+                   f"{len(relationships['parent_classes'])} parent classes, "
+                   f"{len(relationships['treatments'])} treatments, "
+                   f"{len(relationships['causative_agents'])} causative agents")
+        
+        return relationships
+    
     def _parse_medicine_results(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Parse SPARQL results into medicine dictionaries
