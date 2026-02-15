@@ -161,7 +161,7 @@ async def search_by_symptom(request: SymptomSearchRequest):
                 explanation=drug.explanation,
                 treats_conditions=drug.treats_conditions
             )
-            for drug in result.recommendations
+            for drug in result.drug_recommendations
         ]
         
         response = SearchResultResponse(
@@ -267,7 +267,7 @@ async def search_by_disease(request: DiseaseSearchRequest):
                 explanation=drug.explanation,
                 treats_conditions=drug.treats_conditions
             )
-            for drug in result.recommendations
+            for drug in result.drug_recommendations
         ]
         
         response = SearchResultResponse(
@@ -373,7 +373,7 @@ async def find_similar_drugs(request: SimilarDrugsRequest):
                 explanation=drug.explanation,
                 treats_conditions=drug.treats_conditions
             )
-            for drug in result.recommendations
+            for drug in result.drug_recommendations
         ]
         
         response = SearchResultResponse(
