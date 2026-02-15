@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered medical assistant using knowledge graphs for medicine recommendations">
+    <title>Medical Assistant - AI-Powered Medicine Recommendations</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <span class="logo-icon">🏥</span>
+                    Medical Assistant
+                </h1>
+                <p class="tagline">AI-Powered Medicine Recommendations</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="card">
+                    <h2 class="section-title">What are your symptoms?</h2>
+                    <p class="section-description">
+                        Describe your symptoms in detail, and our AI will analyze them to suggest appropriate medicines.
+                    </p>
+                    
+                    <form id="symptomForm" class="symptom-form">
+                        <div class="form-group">
+                            <label for="symptomsInput" class="form-label">Symptoms</label>
+                            <textarea 
+                                id="symptomsInput" 
+                                class="form-input" 
+                                rows="4"
+                                placeholder="Example: I have a headache and fever since yesterday..."
+                                required
+                                minlength="3"
+                                maxlength="1000"
+                            ></textarea>
+                            <div class="input-info">
+                                <span id="charCount" class="char-count">0 / 1000</span>
+                                <span class="input-hint">Be as specific as possible</span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                            <span class="btn-text">Analyze Symptoms</span>
+                            <span class="btn-loading" style="display: none;">
+                                <span class="spinner"></span>
+                                Analyzing...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="results-section" style="display: none;">
+                
+                <!-- Analysis Results -->
+                <div class="card">
+                    <h2 class="section-title">AI Analysis</h2>
+                    
+                    <div class="analysis-content">
+                        <div class="analysis-item">
+                            <div class="analysis-label">Your Symptoms:</div>
+                            <div id="userSymptoms" class="analysis-value"></div>
+                        </div>
+                        
+                        <div class="analysis-item">
+                            <div class="analysis-label">Identified Conditions:</div>
+                            <div id="conditions" class="conditions-list"></div>
+                        </div>
+                        
+                        <div class="analysis-item">
+                            <div class="analysis-label">Confidence Level:</div>
+                            <div id="confidence" class="confidence-badge"></div>
+                        </div>
+                        
+                        <div class="analysis-item">
+                            <div class="analysis-label">AI Reasoning:</div>
+                            <div id="reasoning" class="analysis-value"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medicine Recommendations -->
+                <div class="card">
+                    <h2 class="section-title">Recommended Medicines</h2>
+                    <div id="medicineCount" class="medicine-count"></div>
+                    <div id="medicinesList" class="medicines-list"></div>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="disclaimer-card">
+                    <div class="disclaimer-icon">⚠️</div>
+                    <div class="disclaimer-content">
+                        <strong>Medical Disclaimer:</strong>
+                        <p id="disclaimer"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section id="errorSection" class="error-section" style="display: none;">
+                <div class="error-card">
+                    <div class="error-icon">❌</div>
+                    <div class="error-content">
+                        <h3>Error</h3>
+                        <p id="errorMessage"></p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="hideError()">Try Again</button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Medical Assistant. Powered by AI & Knowledge Graphs.</p>
+                <p class="footer-links">
+                    <a href="/docs" target="_blank">API Docs</a>
+                    <span>•</span>
+                    <a href="/api/health" target="_blank">API Status</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
