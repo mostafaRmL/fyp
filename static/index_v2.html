@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AI-powered medical assistant using ontology-based similarity search">
-    <title>Medical Assistant v2.0 - Similarity-Based Drug Search</title>
-    <link rel="stylesheet" href="/static/css/style_v2.css">
+    <meta name="description" content="Advanced drug discovery platform powered by ontology-based similarity analysis">
+    <title>MedSearch AI - Advanced Drug Discovery Platform</title>
+    <link rel="stylesheet" href="/static/css/style_v2_professional.css">
 </head>
 <body>
     <!-- Header -->
@@ -13,30 +13,45 @@
         <div class="container">
             <div class="header-content">
                 <h1 class="logo">
-                    <span class="logo-icon">🏥</span>
-                    Medical Assistant v2.0
+                    <span class="logo-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="logo-text">MedSearch AI</span>
                 </h1>
-                <p class="tagline">Ontology-Based Similarity Search for Drug Recommendations</p>
-                <div class="version-badge">BFS Graph Traversal • Wikidata Knowledge Graph</div>
+                <p class="tagline">Advanced Drug Discovery Platform</p>
+                <div class="version-badge">Powered by Ontology-Based Similarity Analysis</div>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="main">
+    <main class="main-content">
         <div class="container">
-            
             <!-- Mode Switcher -->
             <section class="mode-section">
-                <div class="card">
+                <div class="card mode-card">
                     <div class="mode-tabs">
                         <button class="mode-tab active" data-mode="symptom" onclick="switchMode('symptom')">
-                            <span class="tab-icon">🤒</span>
-                            <span class="tab-text">Search by Symptoms</span>
+                            <span class="tab-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M12 8V12L14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="tab-text">Symptom-Based Search</span>
                         </button>
                         <button class="mode-tab" data-mode="disease" onclick="switchMode('disease')">
-                            <span class="tab-icon">🏥</span>
-                            <span class="tab-text">Search by Disease</span>
+                            <span class="tab-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21Z" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M12 8V16M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="tab-text">Disease-Based Search</span>
                         </button>
                     </div>
                 </div>
@@ -66,7 +81,7 @@
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="symptomTopK" class="form-label">Max Results</label>
+                                <label for="symptomTopK" class="form-label">Number of Results</label>
                                 <input type="number" id="symptomTopK" class="form-input" value="5" min="1" max="20">
                             </div>
                             <div class="form-group">
@@ -76,10 +91,10 @@
                         </div>
                         
                         <button type="submit" class="btn btn-primary" id="symptomSearchBtn">
-                            <span class="btn-text">🔍 Search Drugs</span>
+                            <span class="btn-text">Search Drug Database</span>
                             <span class="btn-loading" style="display: none;">
                                 <span class="spinner"></span>
-                                Searching...
+                                Analyzing...
                             </span>
                         </button>
                     </form>
@@ -113,14 +128,14 @@
                                 type="text" 
                                 id="diseaseId" 
                                 class="form-input" 
-                                placeholder="e.g., Q3025883"
+                                placeholder="e.g., Q3025883 (leave blank to search by name only)"
                             >
-                            <span class="input-hint">If known, provide the Wikidata entity ID for more accurate results</span>
+                            <span class="input-hint">You can leave this blank - we'll search using the disease name</span>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="diseaseTopK" class="form-label">Max Results</label>
+                                <label for="diseaseTopK" class="form-label">Number of Results</label>
                                 <input type="number" id="diseaseTopK" class="form-input" value="5" min="1" max="20">
                             </div>
                             <div class="form-group">
@@ -130,10 +145,10 @@
                         </div>
                         
                         <button type="submit" class="btn btn-primary" id="diseaseSearchBtn">
-                            <span class="btn-text">🔍 Search Drugs</span>
+                            <span class="btn-text">Search Drug Database</span>
                             <span class="btn-loading" style="display: none;">
                                 <span class="spinner"></span>
-                                Searching...
+                                Analyzing...
                             </span>
                         </button>
                     </form>
@@ -175,10 +190,16 @@
 
                 <!-- Disclaimer -->
                 <div class="disclaimer-card">
-                    <div class="disclaimer-icon">⚠️</div>
+                    <div class="disclaimer-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
                     <div class="disclaimer-content">
-                        <strong>Medical Disclaimer:</strong>
-                        <p>This tool provides informational drug recommendations based on ontology similarity analysis. Results are generated from Wikidata knowledge graphs and should NOT be used as medical advice. Always consult with a qualified healthcare professional before making any medical decisions or taking any medication.</p>
+                        <strong>Important Notice:</strong>
+                        <p>This platform provides informational drug recommendations based on advanced ontology similarity analysis. Results are generated from peer-reviewed knowledge graphs and should be used for research purposes only. Always consult with a qualified healthcare professional before making any medical decisions or taking any medication.</p>
                     </div>
                 </div>
             </section>
@@ -186,15 +207,30 @@
             <!-- Error Section -->
             <section id="errorSection" class="error-section" style="display: none;">
                 <div class="error-card">
-                    <div class="error-icon">❌</div>
+                    <div class="error-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <circle cx="12" cy="16" r="1" fill="currentColor"/>
+                        </svg>
+                    </div>
                     <div class="error-content">
-                        <h3>Error</h3>
+                        <h3>Request Failed</h3>
                         <p id="errorMessage"></p>
                     </div>
                     <button class="btn btn-secondary" onclick="hideError()">Try Again</button>
                 </div>
             </section>
 
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="loading-card">
+                    <div class="loading-spinner"></div>
+                    <h3>Processing Your Request</h3>
+                    <p>Analyzing knowledge graphs and computing similarity scores...</p>
+                    <p style="margin-top: 1rem; color: #6b7280; font-size: 0.9rem;">This may take 30-60 seconds</p>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -202,15 +238,15 @@
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <p>&copy; 2026 Medical Assistant v2.0. Powered by Ontology-Based Similarity Search.</p>
+                <p>&copy; 2026 MedSearch AI. All rights reserved. Powered by Advanced Knowledge Graph Technology.</p>
                 <p class="footer-links">
-                    <a href="/api/v2/" target="_blank">API v2 Info</a>
-                    <span>•</span>
-                    <a href="/api/v2/health" target="_blank">API Status</a>
-                    <span>•</span>
-                    <a href="/docs" target="_blank">Documentation</a>
-                    <span>•</span>
-                    <a href="/static/index.html">v1.0 (Chatbot)</a>
+                    <a href="/api/v2/" target="_blank">API Documentation</a>
+                    <span>|</span>
+                    <a href="/api/v2/health" target="_blank">System Status</a>
+                    <span>|</span>
+                    <a href="/docs" target="_blank">Technical Docs</a>
+                    <span>|</span>
+                    <a href="/static/index.html">Legacy Interface</a>
                 </p>
             </div>
         </div>

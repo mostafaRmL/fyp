@@ -173,22 +173,83 @@ class SimilarityMedicineService:
         """
         logger.info(f"Searching for disease: {disease_name} ({disease_id})")
         
-        # If no disease_id provided, search for it
+        # If no disease_id provided, search for it by name
         if not disease_id:
-            # For now, return empty result. In production, we'd search Wikidata.
-            logger.warning(f"Disease ID required for: {disease_name}")
+            logger.info(f"No disease ID provided, searching by name: {disease_name}")
+            # Try to find disease ID using the disease name directly as a condition
+            # This allows searching by common disease names like "diabetes", "asthma", etc.
+            drugs = self.sparql_service.find_medicines_by_condition(
+                disease_name,
+                limit=15
+            )
+            
+            if not drugs:
+                logger.warning(f"No drugs found for disease: {disease_name}")
+                return SearchResult(
+                    query=disease_name,
+                    query_type="disease",
+                    identified_conditions=[],
+                    drug_recommendations=[],
+                    total_results=0,
+                    search_metadata={
+                        "searched_by": "name",
+                        "message": f"No drugs found for '{disease_name}'. Try providing the Wikidata ID for more accurate results."
+                    }
+                )
+            
+            # Process drugs found by name
+            recommendations = []
+            for drug in drugs:
+                drug_id = drug['drug_id']
+                drug_name = drug['name']
+                
+                # Base score for direct matches
+                base_score = 0.90
+                
+                if base_score >= min_similarity:
+                    recommendations.append(
+                        DrugRecommendation(
+                            drug_id=drug_id,
+                            drug_name=drug_name,
+                            similarity_score=base_score,
+                            treats_conditions=[disease_name],
+                            explanation=f"{drug_name} is used to treat {disease_name}.",
+                            similar_drugs=[],
+                            properties={
+                                'formula': drug.get('chemical_formula'),
+                                'atc_code': drug.get('atc_code'),
+                                'description': drug.get('description')
+                            }
+                        )
+                    )
+            
+            # Sort and limit results
+            ranked_drugs = sorted(
+                recommendations,
+                key=lambda d: d.similarity_score,
+                reverse=True
+            )[:top_k]
+            
+            logger.info(f"Found {len(ranked_drugs)} drugs for {disease_name} (searched by name)")
+            
             return SearchResult(
                 query=disease_name,
                 query_type="disease",
-                identified_conditions=[],
-                drug_recommendations=[],
-                total_results=0,
+                identified_conditions=[{
+                    'condition_id': None,
+                    'name': disease_name,
+                    'searched_by': 'name'
+                }],
+                drug_recommendations=ranked_drugs,
+                total_results=len(ranked_drugs),
                 search_metadata={
-                    "error": "Disease ID required"
+                    "searched_by": "name",
+                    "drugs_found": len(ranked_drugs),
+                    "threshold": min_similarity
                 }
             )
         
-        # Get drugs for this disease
+        # Get drugs for this disease using the provided ID
         drugs = self._find_drugs_for_condition(
             disease_id,
             disease_name,
@@ -341,21 +402,12 @@ class SimilarityMedicineService:
             # Drugs directly treating the condition get high score
             base_score = 0.90
             
-            # Find similar drugs for expanded recommendations
-            similar_drugs = self.find_similar_drugs(
-                drug_id,
-                drug_name,
-                top_k=3,
-                min_similarity=min_similarity
-            )
+            # OPTIMIZATION: Don't find similar drugs during initial search
+            # This was causing query explosion and timeouts
+            # Similar drugs can be found on-demand when user clicks a drug
             
-            # Generate explanation
-            explanation = self._generate_explanation(
-                drug_name,
-                condition_name,
-                base_score,
-                similar_drugs
-            )
+            # Generate simple explanation
+            explanation = f"{drug_name} is used to treat {condition_name}."
             
             # Only include if above threshold
             if base_score >= min_similarity:
@@ -366,7 +418,7 @@ class SimilarityMedicineService:
                         similarity_score=base_score,
                         treats_conditions=[condition_name],
                         explanation=explanation,
-                        similar_drugs=similar_drugs,
+                        similar_drugs=[],  # Empty for now, can be populated later
                         properties={
                             'formula': drug.get('chemical_formula'),
                             'atc_code': drug.get('atc_code'),

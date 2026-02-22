@@ -247,32 +247,28 @@ class SPARQLService:
         """
         logger.info(f"Searching conditions by symptoms: {symptoms}")
         
-        # Build symptom filter for SPARQL
-        symptom_filters = " ".join([f'"{s.lower()}"@en' for s in symptoms])
+        # Build symptom filter for SPARQL - search by label substring
+        symptom_pattern = "|".join([s.lower() for s in symptoms])
         
+        # Simplified query without transitive properties (which cause timeouts)
         query = f"""
-        SELECT ?condition ?conditionLabel 
-               (COUNT(DISTINCT ?symptom) AS ?matchedSymptoms)
-               (GROUP_CONCAT(DISTINCT ?symptomLabel; separator=", ") AS ?matchedSymptomsList)
+        SELECT DISTINCT ?condition ?conditionLabel ?symptomLabel
         WHERE {{
-          # Find symptoms matching our list
-          VALUES ?symptomName {{ {symptom_filters} }}
-          ?symptom rdfs:label ?symptomName .
+          # Find conditions that have symptoms
+          ?condition wdt:P780 ?symptom .
           
-          # Find conditions that have these symptoms
-          ?condition wdt:P31/wdt:P279* wd:Q12136 .  # Instance of disease
-          ?condition wdt:P780 ?symptom .             # Has symptom
-          
-          # Get labels
+          # Get symptom label
           ?symptom rdfs:label ?symptomLabel .
           FILTER(LANG(?symptomLabel) = "en")
           
+          # Match symptom names (case-insensitive)
+          FILTER(REGEX(LCASE(STR(?symptomLabel)), "({symptom_pattern})", "i"))
+          
+          # Get condition label
           SERVICE wikibase:label {{ 
             bd:serviceParam wikibase:language "en" .
           }}
         }}
-        GROUP BY ?condition ?conditionLabel
-        ORDER BY DESC(?matchedSymptoms)
         LIMIT {limit}
         """
         
@@ -282,7 +278,8 @@ class SPARQLService:
             logger.warning(f"No conditions found for symptoms: {symptoms}")
             return []
         
-        conditions = []
+        # Group by condition and count matching symptoms
+        condition_map = {}
         bindings = results.get('results', {}).get('bindings', [])
         
         for binding in bindings:
@@ -292,13 +289,27 @@ class SPARQLService:
             if not condition_id:
                 continue
             
-            condition = {
-                'condition_id': condition_id,
-                'name': binding.get('conditionLabel', {}).get('value', 'Unknown'),
-                'matched_symptoms': int(binding.get('matchedSymptoms', {}).get('value', 0)),
-                'symptom_list': binding.get('matchedSymptomsList', {}).get('value', '').split(', ')
-            }
-            conditions.append(condition)
+            condition_name = binding.get('conditionLabel', {}).get('value', 'Unknown')
+            symptom_name = binding.get('symptomLabel', {}).get('value', '')
+            
+            if condition_id not in condition_map:
+                condition_map[condition_id] = {
+                    'condition_id': condition_id,
+                    'name': condition_name,
+                    'matched_symptoms': 0,
+                    'symptom_list': []
+                }
+            
+            condition_map[condition_id]['matched_symptoms'] += 1
+            if symptom_name:
+                condition_map[condition_id]['symptom_list'].append(symptom_name)
+        
+        # Convert to list and sort by matched symptoms
+        conditions = sorted(
+            condition_map.values(),
+            key=lambda x: x['matched_symptoms'],
+            reverse=True
+        )
         
         logger.info(f"Found {len(conditions)} conditions matching symptoms")
         return conditions
